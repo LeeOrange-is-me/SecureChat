@@ -1,0 +1,6 @@
+{
+    "server_ip": "127.0.0.1",
+    "server_port": 9999,
+    "shared_secret": "ClassProjectSecret2024",
+    "db_path": "server/secure_chat.db"
+}

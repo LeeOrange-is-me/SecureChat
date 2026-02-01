@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureChat | 旗舰版</title>
+    <script src="https://lib.baomitu.com/socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://lib.baomitu.com/vue/3.2.47/vue.global.prod.min.js"></script>
+    <script src="https://lib.baomitu.com/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        [v-cloak] { display: none; }
+        body { background: #f0f2f5; overflow: hidden; }
+        .login-wrapper { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .auth-card { background: white; width: 400px; padding: 40px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); text-align: center; }
+        .auth-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; outline: none; background: #f9f9f9; }
+        .btn-primary { width: 100%; padding: 12px; background: #1e3c72; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { background: #162b55; }
+        .app-layout { display: flex; height: 100vh; background: #fff; }
+        .sidebar { width: 300px; background: #f7f7f7; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
+        .profile-card { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; border-radius: 6px; }
+        .profile-card:hover { background: #eee; }
+        .my-avatar { width: 40px; height: 40px; border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+        .action-btns { display: flex; gap: 5px; }
+        .btn-act { flex: 1; padding: 8px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; display:flex; justify-content:center; align-items:center; }
+        .btn-act:hover { background: #f0f0f0; }
+        .btn-logout { background: #fff0f0; color: #d63031; border-color: #ffcccc; }
+        .friend-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .friend-item { padding: 10px; margin-bottom: 5px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .friend-item.active { background: #dbeafe; color: #1e40af; font-weight: bold; }
+        .f-avatar { width: 32px; height: 32px; background: #bbb; border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-size: 12px; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: white; }
+        .chat-topbar { padding: 10px 20px; border-bottom: 1px solid #eee; font-weight: bold; background: #fcfcfc; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .top-btns { display: flex; gap: 10px; }
+        .search-btn { cursor: pointer; padding: 5px 10px; border-radius: 4px; background: #f0f2f5; font-size: 12px; border: 1px solid #ddd; }
+        .search-btn:hover { background: #e0e0e0; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        .msg-row { display: flex; flex-direction: column; max-width: 70%; transition: background 0.5s; }
+        .msg-row.sent { align-self: flex-end; align-items: flex-end; }
+        .msg-row.received { align-self: flex-start; align-items: flex-start; }
+        .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; position: relative; word-wrap: break-word; }
+        .sent .msg-bubble { background: #1e3c72; color: white; border-bottom-right-radius: 2px; }
+        .received .msg-bubble { background: white; color: #333; border: 1px solid #eee; border-bottom-left-radius: 2px; }
+        .msg-sender { font-size: 11px; opacity: 0.6; margin-bottom: 4px; }
+        .msg-img { max-width: 200px; border-radius: 8px; cursor: pointer; margin-top: 5px; border: 2px solid #fff; }
+        .msg-file { display: inline-block; background: #f8f9fa; padding: 10px; border-radius: 8px; text-decoration: none; color: #333; border: 1px solid #ddd; margin-top: 5px; }
+        .chat-input-area { background: white; border-top: 1px solid #eee; padding: 10px; position: relative; }
+        .toolbar { display: flex; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #f5f5f5; margin-bottom: 8px; min-height: 30px; }
+        .tool-btn { font-size: 13px; cursor: pointer; padding: 4px 10px; border-radius: 4px; background: #f0f2f5; color: #333; display: flex; align-items: center; gap: 5px; user-select: none; font-weight: 500; }
+        .tool-btn:hover { background: #e0e0e0; }
+        .tool-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+        .input-box { display: flex; gap: 10px; }
+        .input-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+        .input-box button { width: 70px; background: #1e3c72; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        .input-box button:disabled { background: #ccc; cursor: not-allowed; }
+        .emoji-picker { position: absolute; bottom: 100px; left: 10px; background: white; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.1); padding: 10px; width: 280px; display: flex; flex-wrap: wrap; gap: 8px; border-radius: 8px; z-index: 99; }
+        .emoji-item { font-size: 24px; cursor: pointer; padding: 2px; }
+        .emoji-item:hover { background: #eee; border-radius: 4px; }
+        .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: white; padding: 20px; border-radius: 10px; width: 300px; display: flex; flex-direction: column; max-height: 80vh; }
+        .modal-btns { margin-top: 15px; text-align: right; }
+        .modal-btns button { margin-left: 10px; padding: 5px 10px; cursor: pointer; }
+        .search-item { padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+        .search-item:hover { background: #f0f8ff; }
+        .search-info { font-size: 11px; color: #888; margin-bottom: 4px; }
+        .search-content { font-size: 13px; color: #333; background: #f9f9f9; padding: 5px; border-radius: 4px; }
+        .color-picker { display: flex; gap: 10px; margin-top: 10px; justify-content: center; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-dot.selected { border-color: #333; transform: scale(1.2); }
+        @keyframes flash { 0% { background: rgba(255, 255, 0, 0); } 50% { background: rgba(255, 235, 59, 0.5); } 100% { background: rgba(255, 255, 0, 0); } }
+        .highlight-msg { animation: flash 1.5s ease-in-out; }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <div v-if="!isLoggedIn" class="login-wrapper">
+        <div class="auth-card">
+            <h2 style="margin-bottom:20px;">🔐 SecureChat</h2>
+            <p v-if="errorMsg" style="color:red">[[ errorMsg ]]</p>
+            <input type="text" v-model="loginForm.username" class="auth-input" placeholder="用户名">
+            <input type="password" v-model="loginForm.password" class="auth-input" placeholder="密码">
+            <div style="margin-top:10px;"><button v-if="authMode==='login'" @click="doLogin" class="btn-primary">登录</button><button v-else @click="doRegister" class="btn-primary" style="background:#27ae60">注册</button></div>
+            <p style="margin-top:15px; color:#666; cursor:pointer" @click="toggleMode">[[ authMode==='login'?'没有账号？注册':'已有账号？登录' ]]</p>
+        </div>
+    </div>
+
+    <div v-else class="app-layout">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="profile-card" @click="openProfileModal">
+                    <div class="my-avatar" :style="{background: userProfile.avatar_color || '#333'}">[[ (userProfile.nickname || username).charAt(0).toUpperCase() ]]</div>
+                    <div><div style="font-weight:bold">[[ userProfile.nickname || username ]] ✏️</div><div style="font-size:12px;color:#888">[[ userProfile.signature || '...' ]]</div></div>
+                </div>
+                <div class="action-btns"><button class="btn-act" @click="modals.add=true">➕ 加好友</button><button class="btn-act" @click="checkRequests(); modals.req=true">🔔 验证</button><button class="btn-act btn-logout" @click="doLogout">🚪 退出</button></div>
+            </div>
+            <div class="friend-list">
+                <div v-for="f in friends" :key="f" class="friend-item" :class="{active: currentTarget===f}" @click="selectFriend(f)">
+                    <div class="f-avatar">[[ f.charAt(0) ]]</div><div>[[ f ]]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-topbar">
+                <div><span>[[ currentTarget ? '与 ' + currentTarget + ' 聊天' : '请选择好友' ]]</span><span v-if="currentTarget" style="font-size:11px; color:green;"> (客户端加密)</span></div>
+                <div v-if="currentTarget" class="top-btns">
+                    <button @click="modals.search=true" class="search-btn">🔍 密态搜索</button>
+                    <button @click="modals.calc=true" class="search-btn">🧮 隐私计算</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="msg-box">
+                <div v-for="(msg, i) in messages" :key="i" :id="'msg-'+msg.id" class="msg-row" :class="msg.sender===username?'sent':'received'">
+                    <span class="msg-sender">[[ msg.sender ]]</span>
+                    <div v-if="msg.msg_type === 'text'" class="msg-bubble">[[ msg.content ]]</div>
+                    <div v-else-if="msg.msg_type === 'image'">
+                        <img :src="msg.content" class="msg-img" @click="window.open(msg.content)">
+                        <div style="font-size:10px; color:white; text-align:right; cursor:pointer;" @click="openStego(msg.content)">🔍 提取隐写</div>
+                    </div>
+                    <div v-else-if="msg.msg_type === 'file'"><a :href="msg.content" target="_blank" class="msg-file">📄 [[ msg.file_name ]]</a></div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div v-if="showEmoji" class="emoji-picker"><span v-for="emo in emojiList" class="emoji-item" @click="addEmoji(emo)">[[ emo ]]</span></div>
+                <div class="toolbar">
+                    <div class="tool-btn" :class="{disabled: !currentTarget}" @click="toggleEmoji">😊 表情</div>
+                    <div class="tool-btn" :class="{disabled: !currentTarget}" @click="safeFileUpload">📎 图片/文件</div>
+                    <div class="tool-btn" :class="{disabled: !currentTarget}" @click="modals.stego=true">🕵️ 隐写发送</div>
+                </div>
+                <input type="file" ref="fileInput" style="display:none" @change="handleFileUpload">
+                <div class="input-box">
+                    <input v-model="inputMsg" @keyup.enter="sendMessage" :disabled="!currentTarget" placeholder="输入消息...">
+                    <button @click="sendMessage" :disabled="!currentTarget">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="modals.profile" class="modal-mask" @click.self="modals.profile=false">
+        <div class="modal-box"><h3>资料编辑</h3><p>昵称：<input v-model="editForm.nickname" style="width:100%"></p><p>签名：<input v-model="editForm.signature" style="width:100%"></p><p>颜色：<span v-for="c in colors" :style="{background:c, display:'inline-block', width:'20px', height:'20px', margin:'2px', border:editForm.avatar_color===c?'2px solid black':'none'}" @click="editForm.avatar_color=c"></span></p><div class="modal-btns"><button @click="saveProfile">保存</button><button @click="modals.profile=false">取消</button></div></div>
+    </div>
+    <div v-if="modals.add" class="modal-mask" @click.self="modals.add=false">
+        <div class="modal-box"><h3>添加好友</h3><input v-model="searchTarget" placeholder="用户名" style="width:100%; padding:5px;"><div class="modal-btns"><button @click="sendFriendRequest">发送</button><button @click="modals.add=false">关闭</button></div></div>
+    </div>
+    <div v-if="modals.req" class="modal-mask" @click.self="modals.req=false">
+        <div class="modal-box"><h3>好友请求</h3><div v-for="r in pendingRequests"><span>[[ r.from_user ]]</span><button @click="handleReq(r.id, 'accept')" style="float:right">同意</button></div><div class="modal-btns"><button @click="modals.req=false">关闭</button></div></div>
+    </div>
+    
+    <div v-if="modals.search" class="modal-mask" @click.self="modals.search=false">
+        <div class="modal-box" style="width:400px; max-height:80vh;">
+            <h3>🔍 客户端密态搜索</h3>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <input v-model="searchKeyword" placeholder="关键词" style="flex:1; padding:8px;">
+                <button @click="doSearch" style="padding:8px 15px; cursor:pointer;">搜索</button>
+            </div>
+            <div style="flex:1; overflow-y:auto; border-top:1px solid #eee; padding-top:10px; min-height:200px;">
+                <div v-if="searchResults.length === 0" style="text-align:center; color:#999;">请输入关键词<br><small>(仅限新消息)</small></div>
+                <div v-for="res in searchResults" :key="res.timestamp" class="search-item" @click="jumpToMsg(res.id)">
+                    <div class="search-info">[[ res.sender ]] • [[ new Date(res.timestamp*1000).toLocaleString() ]]</div>
+                    <div class="search-content">[[ res.content ]]</div>
+                </div>
+            </div>
+            <div class="modal-btns"><button @click="modals.search=false">关闭</button></div>
+        </div>
+    </div>
+
+    <div v-if="modals.calc" class="modal-mask" @click.self="modals.calc=false">
+        <div class="modal-box" style="width:400px;">
+            <h3>🧮 隐私求和 (MPC)</h3>
+            <div style="background:#f9f9f9; padding:10px; border-radius:6px; margin:10px 0;">
+                <div v-for="(val, idx) in calcInputs" :key="idx" style="margin-bottom:5px;">成员[[idx+1]]: <input v-model.number="calcInputs[idx]" type="number" style="width:80px"></div>
+                <button @click="calcInputs.push(0)" style="font-size:12px;">+ 增加</button>
+            </div>
+            <button @click="doPrivacyCalc" class="btn-primary" style="width:100%">发送密文求和</button>
+            <div v-if="calcResult!==null" style="margin-top:10px; text-align:center; color:green; font-weight:bold">总结果: [[ calcResult ]]</div>
+            <div class="modal-btns"><button @click="modals.calc=false">关闭</button></div>
+        </div>
+    </div>
+
+    <div v-if="modals.stego" class="modal-mask" @click.self="modals.stego=false">
+        <div class="modal-box">
+            <h3>🕵️ LSB 图片隐写</h3>
+            <input type="file" ref="stegoInput" style="margin-bottom:10px;">
+            <textarea v-model="stegoText" placeholder="输入隐藏文字..." style="width:100%; height:80px;"></textarea>
+            <button @click="sendStego" class="btn-primary" style="width:100%; margin-top:10px;">加密并发送</button>
+            <div class="modal-btns"><button @click="modals.stego=false">关闭</button></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    createApp({
+        compilerOptions: { delimiters: ['[[', ']]'] },
+        data() {
+            return {
+                isLoggedIn: false, authMode: 'login', username: "", loginForm: {username:"", password:""}, errorMsg: "",
+                userProfile: { nickname: "", signature: "", avatar_color: "" },
+                editForm: {}, colors: ['#3498db', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#34495e'],
+                friends: [], messages: [], pendingRequests: [], currentTarget: null, inputMsg: '', searchTarget: '',
+                modals: { add: false, req: false, profile: false, search: false, calc: false, stego: false },
+                showEmoji: false, emojiList: ['😀','😂','🤣','😍','🥰','😎','🤔','😭','😡','👍','👎','👋','🙏','🎉','🔥','❤️','✨','💩'],
+                searchKeyword: '', searchResults: [], calcInputs: [1000, 2000, 500], calcResult: null, stegoText: ''
+            }
+        },
+        mounted() { 
+            this.socket = io();
+            this.checkLoginStatus(); 
+            this.socket.on('new_message', (d) => {
+                const room = this.getRoomName(d.sender === this.username ? this.currentTarget : d.sender);
+                this.saveLocalEncrypted(room, d);
+                if (this.currentTarget && room === this.getRoomName(this.currentTarget)) {
+                    this.messages.push(d); this.scrollToBottom();
+                }
+            });
+            this.socket.on('history_messages', (msgs) => {
+                if (this.currentTarget) {
+                    this.messages = msgs;
+                    this.saveLocalListEncrypted(this.getRoomName(this.currentTarget), msgs);
+                    this.scrollToBottom();
+                }
+            });
+            this.socket.on('new_request_notify', () => this.checkRequests());
+        },
+        methods: {
+            async sendStego() {
+                const file = this.$refs.stegoInput.files[0];
+                if (!file || !this.stegoText) return alert("请选择图片和文字");
+                const fd = new FormData(); fd.append('image', file); fd.append('text', this.stegoText);
+                try {
+                    const res = await fetch('/api/stego_hide', {method:'POST', body:fd});
+                    const d = await res.json();
+                    if(d.status==='ok') {
+                        this.socket.emit('send_message', { target:this.currentTarget, content:d.url, msg_type:'image', file_name:d.file_name });
+                        this.modals.stego=false; this.stegoText='';
+                    } else alert("隐写失败");
+                } catch(e) { alert("Error"); }
+            },
+            async openStego(url) {
+                try {
+                    const res = await this.post('/api/stego_extract', {url: url});
+                    alert("隐秘信息:\n" + res.text);
+                } catch(e) { alert("提取失败"); }
+            },
+            async doPrivacyCalc() {
+                try {
+                    const s1 = await this.post('/api/client_mock_encrypt', {values:this.calcInputs});
+                    const s2 = await this.post('/api/privacy_calc', {public_key:s1.public_key, ciphertexts:s1.ciphertexts});
+                    const s3 = await this.post('/api/client_mock_decrypt', {public_key:s1.public_key, private_key:s1.private_key, encrypted_sum:s2.encrypted_sum});
+                    this.calcResult = s3.result;
+                } catch(e) { alert("计算失败"); }
+            },
+            computeIndexes(content) {
+                const salt = this.getRoomName(this.currentTarget);
+                const tokens = new Set();
+                const clean = content.replace(/\s+/g, "");
+                for (let c of clean) tokens.add(c);
+                for (let i=0; i<clean.length-1; i++) tokens.add(clean.slice(i, i+2));
+                const idxs = [];
+                tokens.forEach(t => idxs.push(CryptoJS.HmacSHA256(t, salt).toString()));
+                return idxs;
+            },
+            async doSearch() {
+                if(!this.searchKeyword.trim()) return;
+                const trapdoor = CryptoJS.HmacSHA256(this.searchKeyword, this.getRoomName(this.currentTarget)).toString();
+                try {
+                    const res = await this.post('/api/search_sse', {trapdoor: trapdoor, target: this.currentTarget});
+                    this.searchResults = res;
+                } catch(e) {}
+            },
+            jumpToMsg(id) {
+                this.modals.search = false;
+                const el = document.getElementById('msg-'+id);
+                if(el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight-msg'); setTimeout(()=>el.classList.remove('highlight-msg'), 1500); }
+                else alert("不在当前加载的历史消息中");
+            },
+            getLocalKey() { return this.username + "_local_secret_salt_2024"; },
+            saveLocalEncrypted(room, msg) {
+                let list = this.loadLocalEncrypted(room);
+                list.push(msg); if(list.length>100) list=list.slice(-100);
+                try { localStorage.setItem('chat_enc_'+room, CryptoJS.AES.encrypt(JSON.stringify(list), this.getLocalKey()).toString()); } catch(e){}
+            },
+            saveLocalListEncrypted(room, list) {
+                try { localStorage.setItem('chat_enc_'+room, CryptoJS.AES.encrypt(JSON.stringify(list), this.getLocalKey()).toString()); } catch(e){}
+            },
+            loadLocalEncrypted(room) {
+                const enc = localStorage.getItem('chat_enc_'+room);
+                if(!enc) return [];
+                try { return JSON.parse(CryptoJS.AES.decrypt(enc, this.getLocalKey()).toString(CryptoJS.enc.Utf8)) || []; } catch(e){ return []; }
+            },
+            async post(url, data) {
+                try {
+                    const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+                    return await res.json();
+                } catch(e) { return {status:'error'}; }
+            },
+            toggleMode() { this.authMode = this.authMode==='login'?'register':'login'; this.errorMsg=""; },
+            async checkLoginStatus() {
+                try {
+                    const res = await fetch('/api/profile');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if(!data.status) {
+                            this.isLoggedIn = true;
+                            this.userProfile = data;
+                            this.username = data.nickname || "{{ username }}".replace(/[{}]/g, "") || "User";
+                            this.loadFriends(); this.checkRequests();
+                            this.socket.emit('connect');
+                        }
+                    }
+                } catch(e) {}
+            },
+            async doLogin() {
+                const d = await this.post('/api/login', this.loginForm);
+                if (d.status === 'ok') { localStorage.clear(); window.location.reload(); } else this.errorMsg = d.msg;
+            },
+            async doRegister() {
+                const d = await this.post('/api/register', this.loginForm);
+                if (d.status === 'ok') { alert("注册成功"); this.toggleMode(); } else this.errorMsg = d.msg;
+            },
+            async doLogout() { await this.post('/api/logout', {}); window.location.reload(); },
+            openProfileModal() { this.editForm = {...this.userProfile}; this.modals.profile = true; },
+            async saveProfile() {
+                if((await this.post('/api/profile', this.editForm)).status==='ok') {
+                    this.userProfile = {...this.editForm}; this.modals.profile = false;
+                }
+            },
+            toggleEmoji() { if (!this.currentTarget) return alert("请先选择好友"); this.showEmoji = !this.showEmoji; },
+            safeFileUpload() { if (!this.currentTarget) return alert("请先选择好友"); this.$refs.fileInput.click(); },
+            triggerFileUpload() { this.$refs.fileInput.click(); },
+            async handleFileUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const fd = new FormData(); fd.append('file', file);
+                try {
+                    const res = await fetch('/api/upload', {method:'POST', body:fd});
+                    const d = await res.json();
+                    if(d.status==='ok') {
+                        this.socket.emit('send_message', {
+                            target:this.currentTarget, content:d.url, msg_type:d.msg_type, file_name:d.original_name
+                        });
+                    } else alert(d.msg);
+                } catch(err) { alert("上传失败"); }
+                e.target.value = '';
+            },
+            addEmoji(emo) { this.inputMsg += emo; this.showEmoji = false; },
+            async loadFriends() { const r = await fetch('/api/friends'); this.friends = await r.json(); },
+            selectFriend(name) {
+                this.currentTarget = name;
+                const room = this.getRoomName(name);
+                this.messages = this.loadLocalEncrypted(room);
+                this.scrollToBottom();
+                this.socket.emit('join_chat', {target:name});
+            },
+            sendMessage() {
+                if(!this.inputMsg) return;
+                const indexes = this.computeIndexes(this.inputMsg);
+                this.socket.emit('send_message', {target:this.currentTarget, content:this.inputMsg, msg_type:'text', search_indexes:indexes});
+                this.inputMsg = '';
+            },
+            getRoomName(t) { return [this.username, t].sort().join('_'); },
+            async sendFriendRequest() { await this.post('/api/requests', {target:this.searchTarget}); this.modals.add=false; alert("已发送"); },
+            async checkRequests() { const r = await fetch('/api/requests'); this.pendingRequests = await r.json(); },
+            async handleReq(id, act) { await this.post('/api/handle_request', {req_id:id, action:act}); this.checkRequests(); this.loadFriends(); },
+            scrollToBottom() { this.$nextTick(() => { const b=document.getElementById('msg-box'); if(b) b.scrollTop=b.scrollHeight; }); }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

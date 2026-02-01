@@ -1,0 +1,4 @@
+pycryptodome
+flask
+flask-socketio
+eventlet
