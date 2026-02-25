@@ -1,0 +1,11 @@
+# This file is used internally by FFMPEG.
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1543671984_456927438_223132457.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_969261889_4244067864.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_2650057691_288068658.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_962601908_4010891213.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_3786804355_1749148267.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_4071516364_1661719728.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_1264368126_2491766053.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_747104585_3297095102.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_4247107814_3850188934.mp4'
+file 'file:E:/日志记录/【课程】/密码学大作业/SecureChat/media/videos/demo/1080p60/partial_movie_files/S1_Architecture/1141374385_1982072874_2358810818.mp4'
